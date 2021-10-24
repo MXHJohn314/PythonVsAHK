@@ -29,6 +29,6 @@ hash(Key) {
 			}
 		}
 	}
-	return 0
+	return Hash
 }
 
