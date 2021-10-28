@@ -2,7 +2,7 @@
 
 SimpleCmp := (a, b) => (a < b ? -1 : b < a ? 1 : 0)
 
-QSort(arr, cmpFunc:="") {
+QuickSort(&arr, cmpFunc:="") {
 	comparator := cmpFunc ? cmpFunc : SimpleCmp
     stack := []
     stack.Push([1, arr.Length])
@@ -29,43 +29,7 @@ QSort(arr, cmpFunc:="") {
         stack.Push([L, new_pivot - 1])
         stack.Push([new_pivot + 1, R])
 	}
-    return arr
 }
-
-quickSort(l, r, arr, comparator:="") {
-	comparator := comparator ? comparator : SimpleCmp
-    stack := []
-    stack.push([1,  arr.Length])
-    while(stack.Length > 0) {
-        leftright := stack.pop()
-        left := leftright[1]
-        right := leftright[2]
-        if(right - left < 1)
-            continue
-        pivot := (left + right - 1) // 2
-        current := left
-        new_pivot := left
-        swapArr(&arr, pivot, right)
-        while(current < right) {
-            if(comparator.Call(arr[current], arr[right]) < 0) {
-                if(current != new_pivot) {
-                    swapArr(&arr, current, new_pivot)
-                }
-                new_pivot++
-            }
-            current++
-        }
-        swapArr(&arr, new_pivot, right)
-        stack.push([left, new_pivot - 1])
-        stack.push([new_pivot + 1, right])
-    }
-    return arr
-}
-
-
-#SingleInstance Force
-SimpleCmp := (x,y) => x < y ? -1 : y < x ? 1 : 0
-CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
 
 ; Python program for implementation of MergeSort
 ; Merges two subarrays of arr[].
@@ -116,7 +80,9 @@ mergeSort(&arr, l, r, cmp:="") {
     }
 }
 
-
+; #SingleInstance Force
+; SimpleCmp := (x,y) => x < y ? -1 : y < x ? 1 : 0
+; CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
 ; a := [
 ;     [2, 8, 5],
 ;     [8, 3, 2],
@@ -133,8 +99,6 @@ mergeSort(&arr, l, r, cmp:="") {
 ; 	out .= val[3] ","
 ; }
 ; MsgBox(out)
-
-
 
 printIntArrayND(arr) {
 	out.= "{"

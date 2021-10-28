@@ -59,6 +59,7 @@ kruskal(w) {
 	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
 	start.push(s),	end.push(e)
 	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
+	; QuickSort(&edges, CompareEdges)
 	mergeSort(&edges, 0, edges.Length - 1, CompareEdges)
 	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
 	start.push(s),	end.push(e)

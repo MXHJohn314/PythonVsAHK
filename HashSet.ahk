@@ -121,7 +121,9 @@ class HashSet {
 	iter() {
 		return new HashSet.Iterator(this)
 	}
-	
+	size() {
+		return this.size
+	}
 	class Iterator {
 		__New(set) {
 			this.array := []
@@ -154,10 +156,9 @@ class HashSet {
 	}
 }
  
-findSet(ByRef sets, ByRef value) {
-	for set in sets {
-		if set.contains(value) {
-			return set
-		}
-	}
+findSet(sets, target) {
+	for i, set in sets
+		for j, val in set
+			if(val = target)
+				return i
 }
