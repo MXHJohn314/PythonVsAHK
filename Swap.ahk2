@@ -1,0 +1,11 @@
+swapArr(&arr, x, y){
+	t := arr[x]
+	arr[x] := arr[y]
+	arr[y] := t
+}
+
+swap(x, y) {
+	t := x
+	x := y
+	y := t
+}

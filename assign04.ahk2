@@ -1,0 +1,211 @@
+;Assign04
+#Include Set.ahk2
+#Include Sorting.ahk2
+#Warn All, Off
+CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
+reverseCmpEdge := (a, b) => ((a[3] > b[3]) ? -1 : (b[3] > a[3]) ? 1 : 0)
+
+adjMatFromFile(filename) {
+    ;Create an adj/weight matrix from a file with verts, neighbors, and weights.
+	loop read filename {
+		if(A_Index = 1) {
+			n_verts := A_LoopReadLine
+			adjmat := []
+			loop n_verts {
+				array := []
+				loop n_verts
+					array.Push("")
+				adjmat.Push(array)
+			}
+			loop n_verts
+				adjmat[A_Index][A_Index] := 0
+		} else {
+			int_list := []
+			for _, s in StrSplit(A_LoopReadLine, " ")
+				int_list.Push(s)
+			vert := int_list.RemoveAt(1) + 1
+			if(Mod(int_list.Length, 2) != 0)
+				continue
+			n_neighbors := Floor(int_list.Length / 2)
+			neighbors := [], distances := []
+			for i, value in int_list {
+				if(Mod(i, 2) != 0)
+					neighbors.Push(value + 1)
+				else
+					distances.Push(value)
+			}
+			loop n_neighbors
+				adjmat[vert][neighbors[A_Index]] := distances[A_Index]
+		}
+	}
+	return adjmat
+}
+
+kruskal(w) {
+    ;Carry out Kruskal's using W as a weight/adj matrix.
+	start := [], end := []
+    solution := []
+    sets := Set()
+	loop w.Length {
+		sets.add(Set(A_Index))
+	}
+	edges := []
+	edges.Capacity := W.Length**2
+	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
+	for i, row in w
+		for j, val in row
+			if(val != "" && i != j)
+				edges.Push([i, j, val])
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	start.push(s),	end.push(e)
+	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
+	mergeSort(&edges, 0, edges.Length - 1, CompareEdges)
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	start.push(s),	end.push(e)
+	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
+	i := 1
+	while(sets.Size > 1) {
+		minEdge := edges[i++]
+		setA := sets.Find(minEdge[1])
+		setB := sets.Find(minEdge[2])
+		if(setA != setB) {
+			solution.Push(minEdge)
+			sets.add(sets.remove(setA).union(sets.remove(setB)))
+		}
+	}
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	start.push(s),	end.push(e)
+    return Map("solution", solution, "cost", CalcSum(solution), "time", Map("start", start, "end", end))
+}
+
+prim(W) {
+	start := 0, end := 0
+	printIntArrayND(W)
+	DllCall("QueryPerformanceCounter", "Int64*", &start)
+    visited := Set(w.Length)
+    solution := []
+    edgeMap := Map()
+	list := []
+    for i, row in W {
+		for j, cost in row {
+			if j != i {
+				if(W[i][j]) {
+					list.push([i, j, W[i][j]])
+				}
+			}
+		}
+	}
+	quickSort(1, list.Length, list, CompareEdges)
+	while(visited.Size != W.Length) {
+		i := 1
+		while(list.Length > 0 && solution.Length < W.Length - 1 && i < list.Length) {
+			contains1 := visited.contains(list[i][1])
+			contains2 := visited.contains(list[i][2])
+			canTakeEdge := contains1 && !contains2 || !contains1 && contains2 || visited.Size = 0
+			if(canTakeEdge) {
+				if(!contains1)
+					visited.add(list[i][1])
+				if(!contains2)
+					visited.add(list[i][2])
+				solution.push(list[i])
+				list.RemoveAt(i)
+				i := 1
+			} else if(contains1 && contains2) {
+				list.RemoveAt(i)
+			} else {
+				i++
+			}
+		}
+	}
+	DllCall("QueryPerformanceCounter", "Int64*", &end)
+    return Map("solution", solution, "cost", CalcSum(solution), "time", end - start)
+}
+
+CalcSum(solution) {
+	sum := 0
+	for key, val in solution
+		sum += val[3]
+	return sum
+}
+
+graph_verts10 := adjMatFromFile("graph_verts10.txt")
+graph_verts100A := adjMatFromFile("graph_verts100_A.txt")
+graph_verts100B := adjMatFromFile("graph_verts100_B.txt")
+res := Map("graph_verts10", Map("W", graph_verts10)
+         , "graph_verts100A", Map("W", graph_verts100A)
+		 , "graph_verts100B", Map("W", graph_verts100B))
+
+for graphName, matrix in res {
+	res[graphName]["krus"] := kruskal(matrix["W"])
+	res[graphName]["prim"] := prim(matrix["W"])
+}
+
+results := Map("graph_verts10", res["graph_verts10"]
+			, "graph_verts100A", res["graph_verts100A"]
+			, "graph_verts100B", res["graph_verts100B"]
+			, "graph_verts10", res["graph_verts10"]
+			, "graph_verts100A", res["graph_verts100A"]
+			, "graph_verts100B", res["graph_verts100B"])
+
+for key, val in results {
+	ks := val["krus"]["time"]["start"]
+	ke := val["krus"]["time"]["end"]
+	; ps := val["prim"]["time"]["start"]
+	; pe := val["prim"]["time"]["end"]
+	k1 := ke[1] - ks[1], ksum := k1
+	k2 := ke[2] - ks[2], ksum += k2
+	k3 := ke[3] - ks[3], ksum += k3
+	str .= key ":`n"
+	. "krus={`n"
+	. "  cost=" val["krus"]["cost"] ",`n"
+	. "  time={`n"
+	. "      total=" ksum ",`n"
+	. "      part1=" k1 "(" Round(k1 / ksum * 100) "%),`n"
+	. "      part2=" k2 "(" Round(k2 / ksum * 100) "%),`n"
+	. "      part3=" k3 "(" Round(k3 / ksum * 100) "%)`n"
+	. "  }`n"
+	. "}`n"
+	. "prim={cost=" val["prim"]["cost"] ", time=" val["prim"]["time"] "}`n`n"
+}
+MsgBox(str)
+/*
+ * 
+graph_verts10:
+krus={
+	cost=94,
+	time={
+		total=19327,
+      part1=903(5%),
+      part2=7099(37%),
+      part3=11325(59%)
+  }
+}prim={cost=94, time=9172        }
+
+graph_verts100A:
+krus={
+	cost=418,
+	time={
+		total=656261,
+		part1=49880(8%),
+		part2=218482(33%),
+		part3=387899(59%)
+  }
+}prim={cost=418, time=421683        }
+
+graph_verts100B:
+krus={
+	cost=99,
+  time={
+	  total=2851736,
+      part1=71787(3%),
+      part2=2415980(85%),
+      part3=363969(13%)
+	}
+}prim={cost=99, time=30324522        }
+
+
+---------------------------
+OK   
+---------------------------
+
+*/
