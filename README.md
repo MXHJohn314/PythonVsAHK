@@ -1,4 +1,4 @@
-# Should do a detailed comparison of Python implementation vs AutoHotkey
+# Minimum Spanning Trees in Python vs AutoHotkey
 
 ## Kruskal's and Prim's minimum spanning tree (MST) algorithms. Uses sorting, swapping and comparison helper functnions, and three helper `Set` class. 
 
