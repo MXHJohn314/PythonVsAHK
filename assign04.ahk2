@@ -1,9 +1,10 @@
 ;Assign04
-#Include Set.ahk2
-#Include Sorting.ahk2
-#Warn All, Off
+ListLines(false)
+
 CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
+CmpPointAB := (x, y) => x.a < y.b? -1 : x.a < y.b ? 1 : 0
 reverseCmpEdge := (a, b) => ((a[3] > b[3]) ? -1 : (b[3] > a[3]) ? 1 : 0)
+ONE_THOUSAND := Integer(10000000)
 
 adjMatFromFile(filename) {
     ;Create an adj/weight matrix from a file with verts, neighbors, and weights.
@@ -41,172 +42,183 @@ adjMatFromFile(filename) {
 	return adjmat
 }
 
+FindSet(MapOfSets, point) {
+	for set, _ in MapOfSets{
+		if InStr(set, point)
+			return set
+	}
+}
+
 kruskal(w) {
     ;Carry out Kruskal's using W as a weight/adj matrix.
-	start := [], end := []
+	DllCall("QueryPerformanceCounter", "Int64*", &start := 0)
     solution := []
-    sets := Set()
-	loop w.Length {
-		sets.add(Set(A_Index))
-	}
+	sets := Map()
 	edges := []
 	edges.Capacity := W.Length**2
-	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
-	for i, row in w
-		for j, val in row
-			if(val != "" && i != j)
-				edges.Push([i, j, val])
-	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
-	start.push(s),	end.push(e)
-	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
-	; QuickSort(&edges, CompareEdges)
-	mergeSort(&edges, 0, edges.Length - 1, CompareEdges)
-	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
-	start.push(s),	end.push(e)
-	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
-	i := 1
-	while(sets.Size > 1) {
-		minEdge := edges[i++]
-		setA := sets.Find(minEdge[1])
-		setB := sets.Find(minEdge[2])
-		if(setA != setB) {
-			solution.Push(minEdge)
-			sets.add(sets.remove(setA).union(sets.remove(setB)))
+	for i, row in w {
+		sets.Set("|" i "|", "")
+		for j, val in row {
+			if val && i != j {
+				cost := Integer(w[i][j])
+				edge := {a: i, b: j, cost: cost}
+				while edges.Length < cost {
+					edges.Push("")
+				}
+				if !edges[cost]
+					edges[cost] := [edge]
+				else
+					edges[cost].Push(edge)
+			}
 		}
 	}
-	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
-	start.push(s),	end.push(e)
-    return Map("solution", solution, "cost", CalcSum(solution), "time", Map("start", start, "end", end))
+	cost := 1
+	loop {
+		while !edges[cost]
+			cost++
+		costEdges := edges[cost]
+		for _, edge in costEdges {
+			setA := FindSet(sets, edge.a)
+			setB := FindSet(sets, edge.b)
+			if(setA != setB) {
+				solution.Push(edge)
+				sets.Delete(setA)
+				sets.Delete(setB)
+				sets.Set(setA SetB, "")
+			}
+			if solution.Length = w.Length - 1
+				break
+		}
+		cost++
+		if solution.Length = w.Length - 1 || cost > edges.Length
+			break
+	}
+	DllCall("QueryPerformanceCounter", "Int64*", &end := 0)
+	return {
+		solution: solution,
+		cost: CalcSum(solution),
+		time: (end - start)/ONE_THOUSAND
+	}
 }
 
 prim(W) {
-	start := 0, end := 0
-	printIntArrayND(W)
-	DllCall("QueryPerformanceCounter", "Int64*", &start)
-    visited := Set(w.Length)
-    solution := []
-    edgeMap := Map()
+	DllCall("QueryPerformanceCounter", "Int64*", &start := 0)
+    visited := "",
+    solution := [],
+    edgeMap := Map(),
 	list := []
     for i, row in W {
 		for j, cost in row {
-			if j != i {
-				if(W[i][j]) {
-					list.push([i, j, W[i][j]])
-				}
+			if j != i && cost {
+				c := Chr(cost)
+				if edgeMap.Has(c)
+					edgeMap.Get(c).push({a: "|" i "|" , b:  "|" j "|"})
+				else
+					edgeMap.Set(c, [{a: "|" i "|" , b:  "|" j "|"}])
 			}
 		}
 	}
-	quickSort(1, list.Length, list, CompareEdges)
-	while(visited.Size != W.Length) {
-		i := 1
-		while(list.Length > 0 && solution.Length < W.Length - 1 && i < list.Length) {
-			contains1 := visited.contains(list[i][1])
-			contains2 := visited.contains(list[i][2])
-			canTakeEdge := contains1 && !contains2 || !contains1 && contains2 || visited.Size = 0
-			if(canTakeEdge) {
-				if(!contains1)
-					visited.add(list[i][1])
-				if(!contains2)
-					visited.add(list[i][2])
-				solution.push(list[i])
-				list.RemoveAt(i)
-				i := 1
-			} else if(contains1 && contains2) {
-				list.RemoveAt(i)
-			} else {
+	for key, edgeList in edgeMap {
+		for _, verts in edgeList {
+			visited .= verts.a verts.b,
+			solution.Push({a: verts.a, b: verts.b, cost: Ord(key)}),
+			edgeList.RemoveAt(1)
+			break
+		}
+		break
+	}
+	i := 1
+	while solution.Length < W.Length - 1 {
+		outerBreak := false
+		for cost, edges in edgeMap {
+			c := Ord(cost)
+			if edges.Length = 0 {
+				edgeMap.Delete(cost)
+				break
+			}
+			i := 1
+			while i <= edges.Length {
+				v := edges[i],
+				contains1 := inStr(visited, v.a) > 0,
+				contains2 := inStr(visited, v.b) > 0
+				if contains1 && contains2 {
+					edges.RemoveAt(i--)
+				} else if contains1 {
+					visited .= v.b,
+					solution.push({a: v.a, b: v.b, cost: c})
+					edges.RemoveAt(i),
+					i := 0
+					outerBreak := true
+					break
+				}
 				i++
 			}
+			if solution.Length > W.Length - 1 {
+				break
+			}
+			if  outerBreak {
+				break
+			}
 		}
 	}
-	DllCall("QueryPerformanceCounter", "Int64*", &end)
-    return Map("solution", solution, "cost", CalcSum(solution), "time", end - start)
+	DllCall("QueryPerformanceCounter", "Int64*", &end := 0)
+    return {
+		solution: solution,
+		cost: CalcSum(solution),
+		time: (end - start)/ONE_THOUSAND
+	}
 }
 
 CalcSum(solution) {
-	sum := 0
+	sum_ := 0
 	for key, val in solution
-		sum += val[3]
-	return sum
+		sum_ += val.cost
+	return sum_
 }
 
 graph_verts10 := adjMatFromFile("graph_verts10.txt")
 graph_verts100A := adjMatFromFile("graph_verts100_A.txt")
 graph_verts100B := adjMatFromFile("graph_verts100_B.txt")
-res := Map("graph_verts10", Map("W", graph_verts10)
-         , "graph_verts100A", Map("W", graph_verts100A)
-		 , "graph_verts100B", Map("W", graph_verts100B))
-
-for graphName, matrix in res {
-	res[graphName]["krus"] := kruskal(matrix["W"])
-	res[graphName]["prim"] := prim(matrix["W"])
-}
-
-results := Map("graph_verts10", res["graph_verts10"]
-			, "graph_verts100A", res["graph_verts100A"]
-			, "graph_verts100B", res["graph_verts100B"]
-			, "graph_verts10", res["graph_verts10"]
-			, "graph_verts100A", res["graph_verts100A"]
-			, "graph_verts100B", res["graph_verts100B"])
-
-for key, val in results {
-	ks := val["krus"]["time"]["start"]
-	ke := val["krus"]["time"]["end"]
-	; ps := val["prim"]["time"]["start"]
-	; pe := val["prim"]["time"]["end"]
-	k1 := ke[1] - ks[1], ksum := k1
-	k2 := ke[2] - ks[2], ksum += k2
-	k3 := ke[3] - ks[3], ksum += k3
-	str .= key ":`n"
-	. "krus={`n"
-	. "  cost=" val["krus"]["cost"] ",`n"
-	. "  time={`n"
-	. "      total=" ksum ",`n"
-	. "      part1=" k1 "(" Round(k1 / ksum * 100) "%),`n"
-	. "      part2=" k2 "(" Round(k2 / ksum * 100) "%),`n"
-	. "      part3=" k3 "(" Round(k3 / ksum * 100) "%)`n"
-	. "  }`n"
-	. "}`n"
-	. "prim={cost=" val["prim"]["cost"] ", time=" val["prim"]["time"] "}`n`n"
-}
-MsgBox(str)
-/*
- * 
-graph_verts10:
-krus={
-	cost=94,
-	time={
-		total=19327,
-      part1=903(5%),
-      part2=7099(37%),
-      part3=11325(59%)
-  }
-}prim={cost=94, time=9172        }
-
-graph_verts100A:
-krus={
-	cost=418,
-	time={
-		total=656261,
-		part1=49880(8%),
-		part2=218482(33%),
-		part3=387899(59%)
-  }
-}prim={cost=418, time=421683        }
-
-graph_verts100B:
-krus={
-	cost=99,
-  time={
-	  total=2851736,
-      part1=71787(3%),
-      part2=2415980(85%),
-      part3=363969(13%)
+res := {
+	graph_verts10: {
+		krus: kruskal(graph_verts10),
+		prim: prim(graph_verts10)
+	},
+    graph_verts100A: {
+		krus: kruskal(graph_verts100A),
+		prim: prim(graph_verts100A)
+	},
+	graph_verts100B: {
+		krus: kruskal(graph_verts100B),
+		prim: prim(graph_verts100B)
 	}
-}prim={cost=99, time=30324522        }
+}
+
+str := ""
+. "`ngraph_verts10={"
+. "`n krus={"
+. "`n  cost= " res.graph_verts10.krus.cost ", sum= " res.graph_verts10.krus.cost ", time= " res.graph_verts10.krus.time ""
+. "`n },"
+. "`n prim={"
+. "`n  cost= " res.graph_verts10.prim.cost ", sum= " res.graph_verts10.prim.cost ", time= " res.graph_verts10.prim.time ""
+. "`n }"
+. "`n},"
+. "`ngraph_verts100A={"
+. "`n krus={"
+. "`n  cost= " res.graph_verts100A.krus.cost ", sum= " res.graph_verts100A.krus.cost ", time= " res.graph_verts100A.krus.time ""
+. "`n },"
+. "`n prim={"
+. "`n  cost= " res.graph_verts100A.prim.cost ", sum= " res.graph_verts100A.prim.cost ", time= " res.graph_verts100A.prim.time ""
+. "`n }"
+. "`n},"
+. "`ngraph_verts100B={"
+. "`n krus={"
+. "`n  cost= " res.graph_verts100B.krus.cost ", sum= " res.graph_verts100B.krus.cost ", time= " res.graph_verts100B.krus.time ""
+. "`n },"
+. "`n prim={"
+. "`n  cost= " res.graph_verts100B.prim.cost ", sum= " res.graph_verts100B.prim.cost ", time= " res.graph_verts100B.prim.time ""
+. "`n }"
+. "`n},"
 
 
----------------------------
-OK   
----------------------------
-
-*/
+MsgBox(str)
