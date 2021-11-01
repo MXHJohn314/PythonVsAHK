@@ -1,6 +1,6 @@
 # Minimum Spanning Trees in Python vs AutoHotkey
 
-## Kruskal's and Prim's minimum spanning tree (MST) algorithms. Uses sorting, swapping and comparison helper functnions, and three helper `Set` class. 
+## Kruskal's and Prim's minimum spanning tree (MST) algorithms. AHK implementation is in V2 and uses sorting, swapping and comparison helper functnions, and the helper `Set` class. 
 
 Note that both of the functions to be implemented have the exact same input and output (see example input and output below for more details)
 
