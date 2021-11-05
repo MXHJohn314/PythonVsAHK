@@ -18,6 +18,7 @@ Directions:
 """
 
 # for timing checks
+import queue
 import time
 
 
@@ -42,8 +43,24 @@ def adjMatFromFile(filename):
     return adjmat
 
 
+def verify_connection(n, dict_):
+    q = queue.Queue()
+    [q.put(i[0:2]) for i in dict_["solution"]]
+    unvisited = [i for i in range(n)]
+    while q and len(unvisited) != 0:
+        edge = q.get()
+        if edge[0] in unvisited:
+            unvisited.remove(edge[0])
+        if edge[1] in unvisited:
+            unvisited.remove(edge[1])
+    if len(unvisited) != 0:
+        Exception(f"The following tree is not fully connected:\n{dict_}")
+    return dict_
+
+
 def prim(W):
     """ Carry out Prim's algorithm using W as a weight/adj matrix. """
+    start = time.time()
     visited = {0}
     solution = []
     unvisited = [_ for _ in range(1, len(W))]
@@ -60,11 +77,17 @@ def prim(W):
         visited.add(min_edge[1])
         [edge_list.remove(edge) for vertex, edge_list in edges.items() for edge in edge_list
          if edge[1] in visited]
-    return solution
+    speed = time.time() - start
+    return {
+        "solution": solution,
+        "cost": sum([i[2] for i in solution]),
+        "time": speed
+    }
 
 
 def kruskal(w):
     """ Carry out Kruskal's using W as a weight/adj matrix. """
+    start = time.time()
     solution = []
     sets = [{i} for i in range(len(w))]
     edges = sorted([(i, j, w[i][j]) for i in range(len(w))
@@ -85,44 +108,51 @@ def kruskal(w):
         sets.remove(set1)
         sets.remove(set2)
         sets.append(set1 | set2)
-    return solution
+    speed = time.time() - start
+    return {
+        "solution": solution,
+        "cost": sum([i[2] for i in solution]),
+        "time": speed
+    }
+
+
+def run_algorithms(fileName):
+    graph = adjMatFromFile(fileName)
+    return {
+        'name': fileName[0:-4],
+        'krus': verify_connection(len(graph), kruskal(graph)),
+        'prim': verify_connection(len(graph), prim(graph)),
+    }
+
+
+def print_results(res):
+    return f"""
+{res["name"]}: {"{"}
+ krus: {"{"}
+  cost: {res["krus"]["cost"]}
+  time: {res["krus"]["time"]}
+ {"}"}
+ prim: {"{"}
+  cost: {res["prim"]["cost"]}
+  time: {res["prim"]["time"]}
+ {"}"}
+{"}"}"""
 
 
 def assign04_main():
-    """ Demonstrate the functions, starting with creating the graph. """
-    graph_verts10 = adjMatFromFile("graph_verts10.txt")
-    graph_verts100A = adjMatFromFile("graph_verts100_A.txt")
-    graph_verts100B = adjMatFromFile("graph_verts100_B.txt")
-
-    # Run Prim's algorithm
-    start_time = time.time()
-    res_prim_10 = prim(graph_verts10)
-    res_prim_100A = prim(graph_verts100A)
-    res_prim_100B = prim(graph_verts100B)
-    elapsed_time_prim = time.time() - start_time
-    print(f"Prim's runtime: {elapsed_time_prim:.2f}")
-
-    # Run Kruskal's for a single starting vertex, 2
-    start_time = time.time()
-    res_kruskal = kruskal(graph_verts10)
-    res_kruskal100A = kruskal(graph_verts100A)
-    res_kruskal100B = kruskal(graph_verts100B)
-    for p, k in [(res_prim_10, res_kruskal), (res_prim_100A, res_kruskal100A), (res_prim_100B, res_kruskal100B)]:
-        print(f"prim: sum= {sum(i[2] for i in p)}\nsolution={str(p)}\n\n"
-              f"krus: sum= {sum(i[2] for i in k)}\nsolution={str(k)}\n\n\n")
-    elapsed_time_kruskal = time.time() - start_time
-    print(f"Kruskal's runtime: {elapsed_time_kruskal:.2f}")
-
-    # If above assert passed, then it doesn't matter which result is used
-    cost_prim = sum([e[2] for e in res_prim_10])
-    print("MST cost w/ Prim: ", cost_prim)
-    cost_kruskal = sum([e[2] for e in res_kruskal])
-    print("MST cost w/ Kruskal: ", cost_kruskal)
-    assert cost_prim == cost_kruskal
-    print([_ for _ in res_prim_10], sep="\n")
-    print(f'{sum(i[2] for i in res_kruskal)} vs {sum(i[2] for i in res_prim_10)}')
-    print([_ for _ in res_kruskal], sep="\n")
-
+    graphs = []
+    s = ''
+    for size in [25, 50, 250, 500]:
+        for version in ["A", "B"]:
+            graphs.append(f"graph_verts{size}{version}.txt")
+    results = []
+    for val in graphs:
+        res = run_algorithms(val)
+        res["name"] = val
+        results.append(res)
+    for res in results:
+        s += print_results(res)
+    print(s)
 
 
 # Check if the program is being run directly (i.e. not being imported)

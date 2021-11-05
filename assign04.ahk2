@@ -1,5 +1,6 @@
 ;Assign04
 ListLines(false)
+#Warn All, Off
 
 CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
 CmpPointAB := (x, y) => x.a < y.b? -1 : x.a < y.b ? 1 : 0
@@ -22,8 +23,10 @@ adjMatFromFile(filename) {
 				adjmat[A_Index][A_Index] := 0
 		} else {
 			int_list := []
-			for _, s in StrSplit(A_LoopReadLine, " ")
-				int_list.Push(s)
+			matches := StrSplit(A_LoopReadLine, A_Space)
+			for i, s in matches
+				if s != ""
+					int_list.Push(s)
 			vert := int_list.RemoveAt(1) + 1
 			if(Mod(int_list.Length, 2) != 0)
 				continue
@@ -39,59 +42,59 @@ adjMatFromFile(filename) {
 				adjmat[vert][neighbors[A_Index]] := distances[A_Index]
 		}
 	}
+	for i, row in adjmat
+		for j, val in row
+			if adjmat[j][i] != val
+				throw Error("invalid matrix. [" i ", " j "] has " (val ? val : "null") ", but [" j ", " i "] has " (adjmat[j][i] ? adjmat[j][i] : "null"))
 	return adjmat
 }
 
-FindSet(MapOfSets, point) {
+FindSets(MapOfSets, pointa, pointB) {
 	for set, _ in MapOfSets{
-		if InStr(set, point)
-			return set
+		if InStr(set, pointa){
+			s1 := set
+			break
+		}
 	}
+	for set, _ in MapOfSets{
+		if InStr(set, pointB)
+			return [s1, set]
+	}
+	
+}
+
+sortEdges(w) {
+	t := Map()
+	for i, row in w {
+		for j, cost in row {
+			if !cost
+				continue
+			if !t.Has(Chr(cost))
+				t.Set(Chr(cost), [])
+			t.Get(Chr(cost)).Push("|" i "|_|" j "|")
+		}
+	}
+	return t
 }
 
 kruskal(w) {
     ;Carry out Kruskal's using W as a weight/adj matrix.
 	DllCall("QueryPerformanceCounter", "Int64*", &start := 0)
-    solution := []
+	solution := []
 	sets := Map()
-	edges := []
-	edges.Capacity := W.Length**2
-	for i, row in w {
-		sets.Set("|" i "|", "")
-		for j, val in row {
-			if val && i != j {
-				cost := Integer(w[i][j])
-				edge := {a: i, b: j, cost: cost}
-				while edges.Length < cost {
-					edges.Push("")
-				}
-				if !edges[cost]
-					edges[cost] := [edge]
-				else
-					edges[cost].Push(edge)
-			}
+	loop w.Length
+		sets.Set("|" A_Index "|", "")
+	for c, edges in sortEdges(W) {
+		for _, ab in edges {
+			f := StrSplit(ab, "_")
+			setAB := FindSets(sets, f[1],  f[2])
+			if setAB[1] = setAB[2]
+				continue
+			solution.Push({a: f[1], b:  f[2], cost: Ord(c)}),
+			sets.Delete(setAB[1]),
+			sets.Delete(setAB[2]),
+			sets.Set(setAB[1] setAB[2], "")
 		}
-	}
-	cost := 1
-	loop {
-		while !edges[cost]
-			cost++
-		costEdges := edges[cost]
-		for _, edge in costEdges {
-			setA := FindSet(sets, edge.a)
-			setB := FindSet(sets, edge.b)
-			if(setA != setB) {
-				solution.Push(edge)
-				sets.Delete(setA)
-				sets.Delete(setB)
-				sets.Set(setA SetB, "")
-			}
-			if solution.Length = w.Length - 1
-				break
-		}
-		cost++
-		if solution.Length = w.Length - 1 || cost > edges.Length
-			break
 	}
 	DllCall("QueryPerformanceCounter", "Int64*", &end := 0)
 	return {
@@ -176,49 +179,34 @@ CalcSum(solution) {
 	return sum_
 }
 
-graph_verts10 := adjMatFromFile("graph_verts10.txt")
-graph_verts100A := adjMatFromFile("graph_verts100_A.txt")
-graph_verts100B := adjMatFromFile("graph_verts100_B.txt")
-res := {
-	graph_verts10: {
-		krus: kruskal(graph_verts10),
-		prim: prim(graph_verts10)
-	},
-    graph_verts100A: {
-		krus: kruskal(graph_verts100A),
-		prim: prim(graph_verts100A)
-	},
-	graph_verts100B: {
-		krus: kruskal(graph_verts100B),
-		prim: prim(graph_verts100B)
+main(){
+	graphs := []
+	for i, size in [25, 50, "100_", 250, 500]
+		for j, version in ["A", "B"]
+			graphs.Push("graph_verts" size version ".txt")
+	results := []
+	for key, val in graphs
+		results.push(runAlgorithms(val))
+	for key, val in results
+		s .= printResults(val)
+	MsgBox(s)
+}
+
+runAlgorithms(fileName) {
+	graph := adjMatFromFile(fileName)
+	return {
+		name: SubStr(fileName, 1, -4),
+		krus: kruskal(graph),
+		prim: prim(graph),
 	}
 }
 
-str := ""
-. "`ngraph_verts10={"
-. "`n krus={"
-. "`n  cost= " res.graph_verts10.krus.cost ", sum= " res.graph_verts10.krus.cost ", time= " res.graph_verts10.krus.time ""
-. "`n },"
-. "`n prim={"
-. "`n  cost= " res.graph_verts10.prim.cost ", sum= " res.graph_verts10.prim.cost ", time= " res.graph_verts10.prim.time ""
-. "`n }"
-. "`n},"
-. "`ngraph_verts100A={"
-. "`n krus={"
-. "`n  cost= " res.graph_verts100A.krus.cost ", sum= " res.graph_verts100A.krus.cost ", time= " res.graph_verts100A.krus.time ""
-. "`n },"
-. "`n prim={"
-. "`n  cost= " res.graph_verts100A.prim.cost ", sum= " res.graph_verts100A.prim.cost ", time= " res.graph_verts100A.prim.time ""
-. "`n }"
-. "`n},"
-. "`ngraph_verts100B={"
-. "`n krus={"
-. "`n  cost= " res.graph_verts100B.krus.cost ", sum= " res.graph_verts100B.krus.cost ", time= " res.graph_verts100B.krus.time ""
-. "`n },"
-. "`n prim={"
-. "`n  cost= " res.graph_verts100B.prim.cost ", sum= " res.graph_verts100B.prim.cost ", time= " res.graph_verts100B.prim.time ""
-. "`n }"
-. "`n},"
-
-
-MsgBox(str)
+printResults(res) {
+	return ""
+. "`n" res.name ":"
+. "`n krus:"
+. "`n  cost: " res.krus.cost ", time: " res.krus.time ""
+. "`n prim:"
+. "`n  cost: " res.prim.cost ", time: " res.prim.time ""
+}
+main()
