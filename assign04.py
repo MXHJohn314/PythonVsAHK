@@ -19,7 +19,12 @@ Directions:
 
 # for timing checks
 import queue
+import re
 import time
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def adjMatFromFile(filename):
@@ -55,7 +60,7 @@ def verify_connection(n, dict_):
             unvisited.remove(edge[1])
     if len(unvisited) != 0:
         Exception(f"The following tree is not fully connected:\n{dict_}")
-    return dict_
+    return dict_["time"]
 
 
 def prim(W):
@@ -85,7 +90,7 @@ def prim(W):
     }
 
 
-def kruskal(w):
+def krus(w):
     """ Carry out Kruskal's using W as a weight/adj matrix. """
     start = time.time()
     solution = []
@@ -116,13 +121,9 @@ def kruskal(w):
     }
 
 
-def run_algorithms(fileName):
+def run_algorithm(fileName, algo):
     graph = adjMatFromFile(fileName)
-    return {
-        'name': fileName[0:-4],
-        'krus': verify_connection(len(graph), kruskal(graph)),
-        'prim': verify_connection(len(graph), prim(graph)),
-    }
+    return verify_connection(len(graph), algo(graph))
 
 
 def print_results(res):
@@ -141,19 +142,55 @@ def print_results(res):
 
 def assign04_main():
     graphs = []
-    s = ''
-    for size in [25, 50, 250, 500]:
+    sizes = [25, 50, 100, 250]
+    results = {"prim":{}, "krus":{}}
+    for size in sizes:
         for version in ["A", "B"]:
-            graphs.append(f"graph_verts{size}{version}.txt")
-    results = []
-    for val in graphs:
-        res = run_algorithms(val)
-        res["name"] = val
-        results.append(res)
-    for res in results:
-        s += print_results(res)
-    print(s)
+            file_name = f"graph_verts{size}{version}.txt"
+            for algo in [prim, krus]:
+                if version not in results[algo.__name__]:
+                    results[algo.__name__][version] = []
+                results[algo.__name__][version].append(run_algorithm(file_name, algo))
+    print(results)
 
+    # for i,val in enumerate(graphs):
+    #     if val[-5] == 'A'
+    # # json_test = json.dumps(results, indent=0)
+    # # print(re.sub("\s","",json_test))
+    # columns=["size"]
+    # for letter in ["A","B"]:
+    #     for algo in ["Krus","Prim"]:
+    #         for language in ["PY"]:
+    #             columns.append(f"{language}_{algo}_{letter}")
+    # max_time = None
+    # columns = {col : [] for col in columns}
+    # for graph_name in results:
+    #     letter = graph_name[-5]
+    #     krus_time_ = results[graph_name]["krus"]["time"]
+    #     columns[f"PY_Krus_{letter}"].append(krus_time_)
+    #     prim_time_ = results[graph_name]["prim"]["time"]
+    #     columns[f"PY_Prim_{letter}"].append(prim_time_)
+    #     if not max_time:
+    #         max_time = max(krus_time_, prim_time_)
+    #     else:
+    #         max_time = max(krus_time_, prim_time_, max_time)
+    #
+    #
+    # columns["size"] = sizes
+    # df = pd.DataFrame.from_dict(columns)
+    # for graph_name in results:
+    #     letter = graph_name[-5]
+    #     plt.plot(sizes, df[f"PY_Krus_{letter}"], label=f"PY_Krus_{letter}", marker='o', linewidth=3)
+    #     plt.plot(sizes, df[f"PY_Prim_{letter}"], label=f"PY_Prim_{letter}", marker='o', linewidth=3)
+    # print(df)
+    #
+    # plt.xlabel('size as n approaches ∞')
+    # plt.ylabel('time in microseconds')
+    # plt.legend(loc='upper left')
+    # plt.xticks(df ['size'].tolist())
+    # plt.yticks(np.arange(0, max_time, .05))
+    # plt.title('Stuff')
+    # plt.show()
 
 # Check if the program is being run directly (i.e. not being imported)
 if __name__ == '__main__':

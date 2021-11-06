@@ -13,7 +13,7 @@ class TestAssign4Functions(unittest.TestCase):
 
         self.res_prim10 = prim(self.g10)
         self.res_prim10.sort()
-        self.res_krus10 = kruskal(self.g10)
+        self.res_krus10 = krus(self.g10)
         self.res_krus10.sort()
 
         start_time = time.time()
@@ -22,7 +22,7 @@ class TestAssign4Functions(unittest.TestCase):
         self.res_prim100A.sort()
 
         start_time = time.time()
-        self.res_krus100A = kruskal(self.g100A)
+        self.res_krus100A = krus(self.g100A)
         self.time_krus100A = time.time() - start_time
         self.res_krus100A.sort()
 
@@ -32,7 +32,7 @@ class TestAssign4Functions(unittest.TestCase):
         self.res_prim100B.sort()
 
         start_time = time.time()
-        self.res_krus100B = kruskal(self.g100B)
+        self.res_krus100B = krus(self.g100B)
         self.time_krus100B = time.time() - start_time
         self.res_krus100B.sort()
         s = ''

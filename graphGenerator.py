@@ -3,7 +3,7 @@ import random
 import random as r
 import sys
 
-from assign04 import kruskal, adjMatFromFile
+from assign04 import krus, adjMatFromFile
 
 
 def getSkeleto(n):
@@ -70,9 +70,9 @@ def generateGraph(n: int, is_dense: bool, version='', max_weight=20, density_fac
 def generateGraphs(size):
     """ Generates one dense and one sparse graph of the given size. """
     w, skeleton = generateGraph(size, False, "A")
-    krusRes1 = kruskal(w)
+    krusRes1 = krus(w)
     w2, skeleton2 = generateGraph(size, True, "B")
-    krusRes2 = kruskal(w2)
+    krusRes2 = krus(w2)
     print(f'''
     krusA sum = {sum(i[2] for i in krusRes1['solution'])}
     {krusRes2}
