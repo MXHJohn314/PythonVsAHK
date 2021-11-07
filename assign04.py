@@ -65,15 +65,20 @@ def verify_connection(n, dict_):
 
 def prim(W):
     """ Carry out Prim's algorithm using W as a weight/adj matrix. """
+    times = []
     start = time.time()
     visited = {0}
     solution = []
     unvisited = [_ for _ in range(1, len(W))]
     edges = {}
+    times.append(time.time() - start)
     for i in range(len(W)):
+        start = time.time()
         edges[i] = sorted([(i, j, W[i][j]) for j in range(len(W))
                            if j != i and j not in visited and W[i][j]],
                           key=lambda x: x[2], reverse=True)
+        times.append(time.time() - start)
+    start = time.time()
     while unvisited:
         min_edge = min([item for item in edges.items() if item[0] in visited and len(item[1]) > 0],
                        key=lambda x: x[1][-1][2])[1].pop()
@@ -82,21 +87,24 @@ def prim(W):
         visited.add(min_edge[1])
         [edge_list.remove(edge) for vertex, edge_list in edges.items() for edge in edge_list
          if edge[1] in visited]
-    speed = time.time() - start
+    times.append(time.time() - start)
     return {
         "solution": solution,
         "cost": sum([i[2] for i in solution]),
-        "time": speed
+        "time": sum(times)
     }
 
 
 def krus(w):
     """ Carry out Kruskal's using W as a weight/adj matrix. """
+    times = []
     start = time.time()
     solution = []
     sets = [{i} for i in range(len(w))]
+    times.append(time.time() - start)
     edges = sorted([(i, j, w[i][j]) for i in range(len(w))
                     for j in range(len(w)) if w[i][j] and i != j], key=lambda x: x[2])
+    start = time.time()
     i = 0
     while len(sets) > 1:
         min_edge = edges[i]
@@ -113,11 +121,11 @@ def krus(w):
         sets.remove(set1)
         sets.remove(set2)
         sets.append(set1 | set2)
-    speed = time.time() - start
+    times.append(time.time() - start)
     return {
         "solution": solution,
         "cost": sum([i[2] for i in solution]),
-        "time": speed
+        "time": sum(times)
     }
 
 
@@ -141,58 +149,85 @@ def print_results(res):
 
 
 def assign04_main():
+    makeGraphs([i for i in range(25, 101, 2)])
+
+def makeGraphs(sizes):
+    # with open("ahkResults.txt") as ahk_file:
+    #     ahk_results = json.loads(ahk_file.read())
     graphs = []
-    sizes = [25, 50, 100, 250]
-    results = {"prim":{}, "krus":{}}
+
+    py_results = {"prim": {}, "krus": {}}
+
+    v_dict = {"A": "sparse", "B": "dense"}
     for size in sizes:
         for version in ["A", "B"]:
             file_name = f"graph_verts{size}{version}.txt"
             for algo in [prim, krus]:
-                if version not in results[algo.__name__]:
-                    results[algo.__name__][version] = []
-                results[algo.__name__][version].append(run_algorithm(file_name, algo))
-    print(results)
+                if v_dict[version] not in py_results[algo.__name__]:
+                    py_results[algo.__name__][v_dict[version]] = []
+                py_results[algo.__name__][v_dict[version]].append(run_algorithm(file_name, algo))
 
-    # for i,val in enumerate(graphs):
-    #     if val[-5] == 'A'
-    # # json_test = json.dumps(results, indent=0)
-    # # print(re.sub("\s","",json_test))
-    # columns=["size"]
-    # for letter in ["A","B"]:
-    #     for algo in ["Krus","Prim"]:
-    #         for language in ["PY"]:
-    #             columns.append(f"{language}_{algo}_{letter}")
-    # max_time = None
-    # columns = {col : [] for col in columns}
-    # for graph_name in results:
-    #     letter = graph_name[-5]
-    #     krus_time_ = results[graph_name]["krus"]["time"]
-    #     columns[f"PY_Krus_{letter}"].append(krus_time_)
-    #     prim_time_ = results[graph_name]["prim"]["time"]
-    #     columns[f"PY_Prim_{letter}"].append(prim_time_)
-    #     if not max_time:
-    #         max_time = max(krus_time_, prim_time_)
-    #     else:
-    #         max_time = max(krus_time_, prim_time_, max_time)
-    #
-    #
-    # columns["size"] = sizes
-    # df = pd.DataFrame.from_dict(columns)
-    # for graph_name in results:
-    #     letter = graph_name[-5]
-    #     plt.plot(sizes, df[f"PY_Krus_{letter}"], label=f"PY_Krus_{letter}", marker='o', linewidth=3)
-    #     plt.plot(sizes, df[f"PY_Prim_{letter}"], label=f"PY_Prim_{letter}", marker='o', linewidth=3)
-    # print(df)
-    #
-    # plt.xlabel('size as n approaches ∞')
-    # plt.ylabel('time in microseconds')
-    # plt.legend(loc='upper left')
-    # plt.xticks(df ['size'].tolist())
-    # plt.yticks(np.arange(0, max_time, .05))
-    # plt.title('Stuff')
-    # plt.show()
+    # ahk_results_krus_dense_ = ahk_results['krus']['dense'][:-1]
+    # ahk_results_krus_sparse_ = ahk_results['krus']['sparse'][:-1]
+
+    # plt.plot(sizes[:-1], ahk_results_krus_dense_, label="ahk_krus_dense", marker='o')
+    # plt.plot(sizes[:-1], ahk_results_krus_sparse_, label="ahk_krus_sparse", marker='o')
+    py_results_krus_dense_ = py_results['krus']['dense'][:-1]
+    py_results_krus_sparse_ = py_results['krus']['sparse'][:-1]
+    print("py_results_krus_sparse_=" + str(py_results_krus_sparse_),
+          # 'ahk_results_krus_sparse_=' + str(ahk_results_krus_sparse_),
+          "py_results_krus_dense_=" + str(py_results_krus_dense_),
+          # 'ahk_results_krus_dense_=' + str(ahk_results_krus_dense_),
+          sep="\n")
+    plt.plot(sizes[:-1], py_results_krus_dense_, label="py_krus_dense", marker='o')
+    plt.plot(sizes[:-1], py_results_krus_sparse_, label="py_krus_sparse", marker='o')
+    print()
+    plt.xlabel("size as n approaches ∞")
+    plt.ylabel("time in seconds")
+    plt.title("Kruskal's Algorithm Runtime Comparison")
+    plt.legend()
+    plt.show()
+
+
+# for i,val in enumerate(graphs):
+#     if val[-5] == 'A'
+# # json_test = json.dumps(results, indent=0)
+# # print(re.sub("\s","",json_test))
+# columns=["size"]
+# for letter in ["A","B"]:
+#     for algo in ["Krus","Prim"]:
+#         for language in ["PY"]:
+#             columns.append(f"{language}_{algo}_{letter}")
+# max_time = None
+# columns = {col : [] for col in columns}
+# for graph_name in results:
+#     letter = graph_name[-5]
+#     krus_time_ = results[graph_name]["krus"]["time"]
+#     columns[f"PY_Krus_{letter}"].append(krus_time_)
+#     prim_time_ = results[graph_name]["prim"]["time"]
+#     columns[f"PY_Prim_{letter}"].append(prim_time_)
+#     if not max_time:
+#         max_time = max(krus_time_, prim_time_)
+#     else:
+#         max_time = max(krus_time_, prim_time_, max_time)
+#
+#
+# columns["size"] = sizes
+# df = pd.DataFrame.from_dict(columns)
+# for graph_name in results:
+#     letter = graph_name[-5]
+#     plt.plot(sizes, df[f"PY_Krus_{letter}"], label=f"PY_Krus_{letter}", marker='o', linewidth=3)
+#     plt.plot(sizes, df[f"PY_Prim_{letter}"], label=f"PY_Prim_{letter}", marker='o', linewidth=3)
+# print(df)
+#
+# plt.xlabel('size as n approaches ∞')
+# plt.ylabel('time in microseconds')
+# plt.legend(loc='upper left')
+# plt.xticks(df ['size'].tolist())
+# plt.yticks(np.arange(0, max_time, .05))
+# plt.title('Stuff')
+# plt.show()
 
 # Check if the program is being run directly (i.e. not being imported)
 if __name__ == '__main__':
     assign04_main()
-
