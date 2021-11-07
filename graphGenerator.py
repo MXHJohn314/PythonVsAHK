@@ -85,6 +85,6 @@ def generateGraphs(size):
 
 
 if __name__ == "__main__":
-    sizes = [5, 10, 25, 50, 250, 500]
+    sizes = [1000]
     for size in sizes:
         generateGraphs(size)

@@ -2,6 +2,8 @@
 ListLines(false)
 #Warn All, Off
 
+
+DllCall("QueryPerformanceFrequency", "Int64*", &frequency := 0)
 CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
 CmpPointAB := (x, y) => x.a < y.b? -1 : x.a < y.b ? 1 : 0
 reverseCmpEdge := (a, b) => ((a[3] > b[3]) ? -1 : (b[3] > a[3]) ? 1 : 0)
@@ -79,12 +81,19 @@ sortEdges(w) {
 
 kruskal(w) {
     ;Carry out Kruskal's using W as a weight/adj matrix.
-	DllCall("QueryPerformanceCounter", "Int64*", &start := 0)
+	global frequency
+	e := 0
+	start := 0
+	DllCall("QueryPerformanceCounter", "Int64*", &start)
 	solution := []
 	sets := Map()
 	loop w.Length
 		sets.Set("|" A_Index "|", "")
-	for c, edges in sortEdges(W) {
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	t1 := e - start
+	sorted := sortEdges(W)
+	DllCall("QueryPerformanceCounter", "Int64*", &start)
+	for c, edges in sorted {
 		for _, ab in edges {
 			f := StrSplit(ab, "_")
 			setAB := FindSets(sets, f[1],  f[2])
@@ -96,19 +105,23 @@ kruskal(w) {
 			sets.Set(setAB[1] setAB[2], "")
 		}
 	}
-	DllCall("QueryPerformanceCounter", "Int64*", &end := 0)
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	t2 := e - start
+	time := (t1 + t2)/frequency
 	return {
 		solution: solution,
 		cost: CalcSum(solution),
-		time: (end - start)/ONE_THOUSAND
+		time: time
 	}
 }
 
 prim(W) {
-	DllCall("QueryPerformanceCounter", "Int64*", &start := 0)
+	global frequency
+	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
     visited := "",
     solution := [],
     edgeMap := Map(),
+	times := []
 	list := []
     for i, row in W {
 		for j, cost in row {
@@ -116,8 +129,14 @@ prim(W) {
 				c := Chr(cost)
 				if edgeMap.Has(c)
 					edgeMap.Get(c).push({a: "|" i "|" , b:  "|" j "|"})
-				else
+				else {
+
+					DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+					times.Push(e - s)
 					edgeMap.Set(c, [{a: "|" i "|" , b:  "|" j "|"}])
+					DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
+				}
+
 			}
 		}
 	}
@@ -164,11 +183,14 @@ prim(W) {
 			}
 		}
 	}
-	DllCall("QueryPerformanceCounter", "Int64*", &end := 0)
+	DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
+	totalTime := 0
+	for t in times
+		totalTime += t
     return {
 		solution: solution,
 		cost: CalcSum(solution),
-		time: (end - start)/ONE_THOUSAND
+		time: totalTime/frequency
 	}
 }
 
@@ -179,34 +201,69 @@ CalcSum(solution) {
 	return sum_
 }
 
-main(){
-	graphs := []
-	for i, size in [25, 50, "100_", 250, 500]
-		for j, version in ["A", "B"]
-			graphs.Push("graph_verts" size version ".txt")
-	results := []
-	for key, val in graphs
-		results.push(runAlgorithms(val))
-	for key, val in results
-		s .= printResults(val)
-	MsgBox(s)
-}
-
-runAlgorithms(fileName) {
-	graph := adjMatFromFile(fileName)
-	return {
-		name: SubStr(fileName, 1, -4),
-		krus: kruskal(graph),
-		prim: prim(graph),
+main(runCount){
+	loop runCount {
+		ToolTip(A_Index "/" runCount)
+		FileAppend(run(), "ahk_results.txt")
 	}
+	; MsgBox(runs)
+}
+run(){
+	reskrus25A := kruskal(adjMatFromFile("graph_verts25A.txt"))
+	reskrus25B := kruskal(adjMatFromFile("graph_verts25B.txt"))
+	reskrus50A := kruskal(adjMatFromFile("graph_verts50A.txt"))
+	reskrus50B := kruskal(adjMatFromFile("graph_verts50B.txt"))
+	reskrus100A := kruskal(adjMatFromFile("graph_verts100A.txt"))
+	reskrus100B := kruskal(adjMatFromFile("graph_verts100B.txt"))
+	reskrus250A := kruskal(adjMatFromFile("graph_verts250A.txt"))
+	reskrus250B := kruskal(adjMatFromFile("graph_verts250B.txt"))
+	reskrus500A := kruskal(adjMatFromFile("graph_verts500A.txt"))
+	reskrus500B := kruskal(adjMatFromFile("graph_verts500B.txt"))
+	resprim25B := kruskal(adjMatFromFile("graph_verts25B.txt"))
+	
+	resprim50A :=  prim(adjMatFromFile("graph_verts50A.txt"))
+	resprim25A :=  prim(adjMatFromFile("graph_verts25A.txt"))
+	resprim50B :=  prim(adjMatFromFile("graph_verts50B.txt"))
+	resprim100A := prim(adjMatFromFile("graph_verts100A.txt"))
+	resprim100B := prim(adjMatFromFile("graph_verts100B.txt"))
+	resprim250A := prim(adjMatFromFile("graph_verts250A.txt"))
+	resprim250B := prim(adjMatFromFile("graph_verts250B.txt"))
+	resprim500A := prim(adjMatFromFile("graph_verts500A.txt"))
+	resprim500B := prim(adjMatFromFile("graph_verts500B.txt"))
+	resKrusSparse := [reskrus25A, reskrus50A, reskrus100A, reskrus250A, reskrus500A]
+	resKrusDense := [reskrus25B, reskrus50B,reskrus100B, reskrus250B, reskrus500B]
+
+	
+	resPrimSparse := [resprim25A, resprim50A, resprim100A, resprim250A, resprim500A]
+	resPrimDense := [resprim25B, resprim50B, resprim100B, resprim250B, resprim500B]
+
+	return getResultString(
+		Map(
+			"krus", Map("sparse", resKrusSparse, "dense", resKrusDense),
+			"prim", Map("sparse", resPrimSparse, "dense", resPrimDense)
+		)	
+	)
 }
 
-printResults(res) {
-	return ""
-. "`n" res.name ":"
-. "`n krus:"
-. "`n  cost: " res.krus.cost ", time: " res.krus.time ""
-. "`n prim:"
-. "`n  cost: " res.prim.cost ", time: " res.prim.time ""
+runAlgorithm(fileName, algo) {
+	graph := adjMatFromFile(fileName)
+	return algo.Call(graph)
 }
-main()
+
+getResultString(res) {
+	s := "{"
+	a := [25, 50, 100, 250, 500]
+	for algName, version in res {
+		s .= "`"" algName "`":{"
+		for versionName, list in version {
+			s .= "`"" versionName "`":["
+			for i, value in list {
+				s .= value.time  ","
+			}
+			s := SubStr(s, 1, -1) "],"
+		}
+		s := SubStr(s, 1, -1) "},"
+	}
+	return SubStr(s, 1, -1) "}`n"
+}
+main(100)
