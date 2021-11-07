@@ -1,0 +1,120 @@
+graph_verts25A.txt: {
+ krus: {
+  cost: 136
+  time: 0.0009999275207519531
+ }
+ prim: {
+  cost: 136
+  time: 0.0009961128234863281
+ }
+}
+graph_verts25B.txt: {
+ krus: {
+  cost: 39
+  time: 0.0010006427764892578
+ }
+ prim: {
+  cost: 39
+  time: 0.0017485618591308594
+ }
+}
+graph_verts50A.txt: {
+ krus: {
+  cost: 353
+  time: 0.0007333755493164062
+ }
+ prim: {
+  cost: 353
+  time: 0.001260519027709961
+ }
+}
+graph_verts50B.txt: {
+ krus: {
+  cost: 49
+  time: 0.0019838809967041016
+ }
+ prim: {
+  cost: 49
+  time: 0.007788419723510742
+ }
+}
+graph_verts100_A.txt: {
+ krus: {
+  cost: 418
+  time: 0.0019800662994384766
+ }
+ prim: {
+  cost: 418
+  time: 0.008179187774658203
+ }
+}
+graph_verts100_B.txt: {
+ krus: {
+  cost: 99
+  time: 0.007315635681152344
+ }
+ prim: {
+  cost: 99
+  time: 0.04204416275024414
+ }
+}
+graph_verts250A.txt: {
+ krus: {
+  cost: 1674
+  time: 0.011004447937011719
+ }
+ prim: {
+  cost: 1674
+  time: 0.025061607360839844
+ }
+}
+graph_verts250B.txt: {
+ krus: {
+  cost: 249
+  time: 0.032004356384277344
+ }
+ prim: {
+  cost: 249
+  time: 0.5334758758544922
+ }
+}
+graph_verts500A.txt: {
+ krus: {
+  cost: 2982
+  time: 0.07293200492858887
+ }
+ prim: {
+  cost: 2982
+  time: 0.1149899959564209
+ }
+}
+graph_verts500B.txt: {
+ krus: {
+  cost: 499
+  time: 0.12398719787597656
+ }
+ prim: {
+  cost: 499
+  time: 5.315402269363403
+ }
+}
+graph_verts1000A.txt: {
+ krus: {
+  cost: 6297
+  time: 0.17702293395996094
+ }
+ prim: {
+  cost: 6297
+  time: 0.3572556972503662
+ }
+}
+graph_verts1000B.txt: {
+ krus: {
+  cost: 999
+  time: 0.49065351486206055
+ }
+ prim: {
+  cost: 999
+  time: 46.3345742225647
+ }
+}
