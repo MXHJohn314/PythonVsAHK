@@ -22,7 +22,6 @@ import queue
 import re
 import time
 import json
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -31,7 +30,7 @@ def adjMatFromFile(filename):
     """ Create an adj/weight matrix from a file with verts, neighbors, and weights. """
     f = open(filename, "r")
     n_verts = int(f.readline())
-    print(f" n_verts = {n_verts}")
+    # print(f" n_verts = {n_verts}")
     adjmat = [[None] * n_verts for i in range(n_verts)]
     for i in range(n_verts):
         adjmat[i][i] = 0
@@ -47,8 +46,8 @@ def adjMatFromFile(filename):
     f.close()
     return adjmat
 
-
 def verify_connection(n, dict_):
+    """ Helper method to verify that all vertices can be connected from a given list of solution edges. """
     q = queue.Queue()
     [q.put(i[0:2]) for i in dict_["solution"]]
     unvisited = [i for i in range(n)]
@@ -130,104 +129,102 @@ def krus(w):
 
 
 def run_algorithm(fileName, algo):
+    """ Calls the specified algorithm to be run with a given graph file. """
     graph = adjMatFromFile(fileName)
     return verify_connection(len(graph), algo(graph))
 
 
-def print_results(res):
-    return f"""
-{res["name"]}: {"{"}
- krus: {"{"}
-  cost: {res["krus"]["cost"]}
-  time: {res["krus"]["time"]}
- {"}"}
- prim: {"{"}
-  cost: {res["prim"]["cost"]}
-  time: {res["prim"]["time"]}
- {"}"}
-{"}"}"""
+def run(doWrite=False):
+    """
+    Will run all python algorithms and write results to a file if doWrite=True.
+    Reads python results from a file as a list of json objects, and returns a dictionary.
+    """
+    if doWrite:
+        s = ''
+        for j in range(100):
+            resKrusSparse = []
+            resPrimSparse = []
+            resKrusDense = []
+            resPrimDense = []
+            js = []
+            for i in range(25, 100, 2):
+                resKrusSparse.append(krus(adjMatFromFile(f"graph_verts{i}A.txt"))["time"])
+                resKrusDense.append(krus(adjMatFromFile(f"graph_verts{i}B.txt"))["time"])
+                resPrimSparse.append(prim(adjMatFromFile(f"graph_verts{i}A.txt"))["time"])
+                resPrimDense.append(prim(adjMatFromFile(f"graph_verts{i}B.txt"))["time"])
+            js.append({
+                    "krus": {"sparse": resKrusSparse, "dense": resKrusDense},
+                    "prim": {"sparse": resPrimSparse, "dense": resPrimDense}
+            })
+            sub_ = re.sub("'", '"', json.dumps(js))
+            s += f'{sub_}\n'
+            print(j)
+        with open('pyResults.txt', 'w') as file:
+            file.write(s)
+    js = [json.loads(i)[0] for i in open('pyResults.txt', 'r').readlines()]
+    py_res = {'krus': {'sparse': [], 'dense': []}, 'prim': {'sparse': [], 'dense': []}}
+    for algo_name, algo_def in {'krus': krus, 'prim': prim}.items():
+        for algo_key, algo_val in {"sparse": "A", 'dense': 'B'}.items():
+            for j in range(len(js[0]['krus']['sparse'])):
+                py_res[algo_name][algo_key].append(
+                    np.mean([js[i][algo_name][algo_key][j] for i in range(len(js))]))
+    return py_res
+
+def assign04_main(doPythonRuns=False, doGraphs=True, sizes=None):
+    """
+    Will create python results if doPythonRuns=True
+    Will create graphs if doGraphs=True
+    Will initialize the sizes if sizes=None.
+    sizes is used to determine which `graph_verts` files to use.
+    """
+    global py_res
+    if sizes is None:
+        sizes = [i for i in range(25, 100, 2)]
+    if doPythonRuns:
+        py_res = run(False)
+    with open("ahk_results.txt") as ahk_file:
+        js = [json.loads(line) for line in ahk_file.readlines()]
+        rng = range(len(js[0]['krus']['sparse']))
+        ahk_res = {'krus': {'sparse': [], 'dense': []}, 'prim': {'sparse': [], 'dense': []}}
+        for algo_name, algo_def in {'krus': krus, 'prim': prim}.items():
+            for algo_key, algo_val in {"sparse": "A", 'dense': 'B'}.items():
+                for j in rng:
+                    ahk_res[algo_name][algo_key].append(np.mean([js[i][algo_name][algo_key][j] for i in range(len(js))]))
+    if doGraphs:
+        makeGraphs(sizes, py_res, ahk_res)
 
 
-def assign04_main():
-    makeGraphs([i for i in range(25, 101, 2)])
-
-def makeGraphs(sizes):
-    # with open("ahkResults.txt") as ahk_file:
-    #     ahk_results = json.loads(ahk_file.read())
-    graphs = []
-
-    py_results = {"prim": {}, "krus": {}}
-
-    v_dict = {"A": "sparse", "B": "dense"}
-    for size in sizes:
-        for version in ["A", "B"]:
-            file_name = f"graph_verts{size}{version}.txt"
-            for algo in [prim, krus]:
-                if v_dict[version] not in py_results[algo.__name__]:
-                    py_results[algo.__name__][v_dict[version]] = []
-                py_results[algo.__name__][v_dict[version]].append(run_algorithm(file_name, algo))
-
-    # ahk_results_krus_dense_ = ahk_results['krus']['dense'][:-1]
-    # ahk_results_krus_sparse_ = ahk_results['krus']['sparse'][:-1]
-
-    # plt.plot(sizes[:-1], ahk_results_krus_dense_, label="ahk_krus_dense", marker='o')
-    # plt.plot(sizes[:-1], ahk_results_krus_sparse_, label="ahk_krus_sparse", marker='o')
-    py_results_krus_dense_ = py_results['krus']['dense'][:-1]
-    py_results_krus_sparse_ = py_results['krus']['sparse'][:-1]
-    print("py_results_krus_sparse_=" + str(py_results_krus_sparse_),
-          # 'ahk_results_krus_sparse_=' + str(ahk_results_krus_sparse_),
-          "py_results_krus_dense_=" + str(py_results_krus_dense_),
-          # 'ahk_results_krus_dense_=' + str(ahk_results_krus_dense_),
-          sep="\n")
-    plt.plot(sizes[:-1], py_results_krus_dense_, label="py_krus_dense", marker='o')
-    plt.plot(sizes[:-1], py_results_krus_sparse_, label="py_krus_sparse", marker='o')
-    print()
-    plt.xlabel("size as n approaches ∞")
-    plt.ylabel("time in seconds")
-    plt.title("Kruskal's Algorithm Runtime Comparison")
+def makeGraphs(sizes, py_res, ahk_res):
+    """
+    Creates plots by taking in dictionaries containing results from both languages.
+    Only uncomment one of the following sections of code to make a graph comparing those results.
+    """
+    plt.xlabel("Number of Vertices")
+    plt.ylabel("Time (Seconds)")
     plt.legend()
     plt.show()
 
+    """Section 1, kruskal, dense"""
+    # plt.plot(sizes[:-1], ahk_res['krus']['dense'], label="ahk_krus_dense", marker='o')
+    # plt.plot(sizes[:-1], py_res['krus']['dense'][:-1], label="py_krus_dense", marker='o')
+    # plt.title("Kruskal's Algorithm (Dense Graphs)")
 
-# for i,val in enumerate(graphs):
-#     if val[-5] == 'A'
-# # json_test = json.dumps(results, indent=0)
-# # print(re.sub("\s","",json_test))
-# columns=["size"]
-# for letter in ["A","B"]:
-#     for algo in ["Krus","Prim"]:
-#         for language in ["PY"]:
-#             columns.append(f"{language}_{algo}_{letter}")
-# max_time = None
-# columns = {col : [] for col in columns}
-# for graph_name in results:
-#     letter = graph_name[-5]
-#     krus_time_ = results[graph_name]["krus"]["time"]
-#     columns[f"PY_Krus_{letter}"].append(krus_time_)
-#     prim_time_ = results[graph_name]["prim"]["time"]
-#     columns[f"PY_Prim_{letter}"].append(prim_time_)
-#     if not max_time:
-#         max_time = max(krus_time_, prim_time_)
-#     else:
-#         max_time = max(krus_time_, prim_time_, max_time)
-#
-#
-# columns["size"] = sizes
-# df = pd.DataFrame.from_dict(columns)
-# for graph_name in results:
-#     letter = graph_name[-5]
-#     plt.plot(sizes, df[f"PY_Krus_{letter}"], label=f"PY_Krus_{letter}", marker='o', linewidth=3)
-#     plt.plot(sizes, df[f"PY_Prim_{letter}"], label=f"PY_Prim_{letter}", marker='o', linewidth=3)
-# print(df)
-#
-# plt.xlabel('size as n approaches ∞')
-# plt.ylabel('time in microseconds')
-# plt.legend(loc='upper left')
-# plt.xticks(df ['size'].tolist())
-# plt.yticks(np.arange(0, max_time, .05))
-# plt.title('Stuff')
-# plt.show()
+    """Section 2, kruskal, sparse"""
+    # plt.plot(sizes[:-1], ahk_res['krus']['sparse'], label="ahk_krus_sparse", marker='o')
+    # plt.plot(sizes[:-1], py_res['krus']['sparse'][:-1], label="py_krus_sparse", marker='o')
+    # plt.title("Kruskal's Algorithm (Sparse Graphs)")
+
+    """Section 3, prim, dense"""
+    # plt.plot(sizes[:-1], ahk_res['prim']['dense'], label="ahk_prim_dense", marker='o')
+    # plt.plot(sizes[:-1], py_res['prim']['dense'][:-1], label="py_prim_dense", marker='o')
+    # plt.title("Prim's Algorithm (Dense Graphs)")
+
+    """Section 4, prim, sparse"""
+    plt.plot(sizes[:-1], ahk_res['prim']['sparse'], label="ahk_prim_sparse", marker='o')
+    plt.plot(sizes[:-1], py_res['prim']['sparse'][:-1], label="py_prim_sparse", marker='o')
+    plt.title("Prim's Algorithm (Sparse Graphs)")
+
 
 # Check if the program is being run directly (i.e. not being imported)
 if __name__ == '__main__':
-    assign04_main()
+    assign04_main(doPythonRuns=True, doGraphs=True)

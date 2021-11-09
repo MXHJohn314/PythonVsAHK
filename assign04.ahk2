@@ -2,13 +2,12 @@
 ListLines(false)
 #Warn All, Off
 
+; This Program documents the run times of Prim's and Kruskal's algorithms. It uses QueryPerformanceFrequency and QueryPerformanceCounter to compute time intervals, and saves results to a file.
 
+; frequency is the number of clock ticks per second on this machine. It will be used to divide the interval im clock ticks, so that we end up with actual seconds instead of a machine-specific time interval.
 DllCall("QueryPerformanceFrequency", "Int64*", &frequency := 0)
-CompareEdges := (a, b) => ((a[3] < b[3]) ? -1 : (b[3] < a[3]) ? 1 : 0)
-CmpPointAB := (x, y) => x.a < y.b? -1 : x.a < y.b ? 1 : 0
-reverseCmpEdge := (a, b) => ((a[3] > b[3]) ? -1 : (b[3] > a[3]) ? 1 : 0)
-ONE_THOUSAND := Integer(10000000)
 
+; read 2d matrix from file
 adjMatFromFile(filename) {
     ;Create an adj/weight matrix from a file with verts, neighbors, and weights.
 	loop read filename {
@@ -51,6 +50,7 @@ adjMatFromFile(filename) {
 	return adjmat
 }
 
+; subroutine for finding a subset within a set of sets
 FindSets(MapOfSets, pointa, pointB) {
 	for set, _ in MapOfSets{
 		if InStr(set, pointa){
@@ -65,6 +65,7 @@ FindSets(MapOfSets, pointa, pointB) {
 	
 }
 
+; sub routine for sorting in kruskal's
 sortEdges(w) {
 	t := Map()
 	for i, row in w {
@@ -79,8 +80,8 @@ sortEdges(w) {
 	return t
 }
 
+;Carry out Kruskal's using W as a weight/adj matrix.
 kruskal(w) {
-    ;Carry out Kruskal's using W as a weight/adj matrix.
 	global frequency
 	e := 0
 	start := 0
@@ -115,6 +116,7 @@ kruskal(w) {
 	}
 }
 
+;Carry out Prim's using W as a weight/adj matrix.
 prim(W) {
 	global frequency
 	DllCall("QueryPerformanceCounter", "Int64*", &s := 0)
@@ -130,7 +132,6 @@ prim(W) {
 				if edgeMap.Has(c)
 					edgeMap.Get(c).push({a: "|" i "|" , b:  "|" j "|"})
 				else {
-
 					DllCall("QueryPerformanceCounter", "Int64*", &e := 0)
 					times.Push(e - s)
 					edgeMap.Set(c, [{a: "|" i "|" , b:  "|" j "|"}])
@@ -194,6 +195,7 @@ prim(W) {
 	}
 }
 
+; returns the sum of the cost of all edges in a solution
 CalcSum(solution) {
 	sum_ := 0
 	for key, val in solution
@@ -201,55 +203,13 @@ CalcSum(solution) {
 	return sum_
 }
 
-main(runCount){
-	loop runCount {
-		ToolTip(A_Index "/" runCount)
-		FileAppend(run(), "ahk_results.txt")
-	}
-	; MsgBox(runs)
-}
-run(){
-	reskrus25A := kruskal(adjMatFromFile("graph_verts25A.txt"))
-	reskrus25B := kruskal(adjMatFromFile("graph_verts25B.txt"))
-	reskrus50A := kruskal(adjMatFromFile("graph_verts50A.txt"))
-	reskrus50B := kruskal(adjMatFromFile("graph_verts50B.txt"))
-	reskrus100A := kruskal(adjMatFromFile("graph_verts100A.txt"))
-	reskrus100B := kruskal(adjMatFromFile("graph_verts100B.txt"))
-	reskrus250A := kruskal(adjMatFromFile("graph_verts250A.txt"))
-	reskrus250B := kruskal(adjMatFromFile("graph_verts250B.txt"))
-	reskrus500A := kruskal(adjMatFromFile("graph_verts500A.txt"))
-	reskrus500B := kruskal(adjMatFromFile("graph_verts500B.txt"))
-	resprim25B := kruskal(adjMatFromFile("graph_verts25B.txt"))
-	
-	resprim50A :=  prim(adjMatFromFile("graph_verts50A.txt"))
-	resprim25A :=  prim(adjMatFromFile("graph_verts25A.txt"))
-	resprim50B :=  prim(adjMatFromFile("graph_verts50B.txt"))
-	resprim100A := prim(adjMatFromFile("graph_verts100A.txt"))
-	resprim100B := prim(adjMatFromFile("graph_verts100B.txt"))
-	resprim250A := prim(adjMatFromFile("graph_verts250A.txt"))
-	resprim250B := prim(adjMatFromFile("graph_verts250B.txt"))
-	resprim500A := prim(adjMatFromFile("graph_verts500A.txt"))
-	resprim500B := prim(adjMatFromFile("graph_verts500B.txt"))
-	resKrusSparse := [reskrus25A, reskrus50A, reskrus100A, reskrus250A, reskrus500A]
-	resKrusDense := [reskrus25B, reskrus50B,reskrus100B, reskrus250B, reskrus500B]
-
-	
-	resPrimSparse := [resprim25A, resprim50A, resprim100A, resprim250A, resprim500A]
-	resPrimDense := [resprim25B, resprim50B, resprim100B, resprim250B, resprim500B]
-
-	return getResultString(
-		Map(
-			"krus", Map("sparse", resKrusSparse, "dense", resKrusDense),
-			"prim", Map("sparse", resPrimSparse, "dense", resPrimDense)
-		)	
-	)
-}
-
+; calls the specified algorithm to be run with a given graph file
 runAlgorithm(fileName, algo) {
 	graph := adjMatFromFile(fileName)
 	return algo.Call(graph)
 }
 
+; Turns results into a json string for saving to files..
 getResultString(res) {
 	s := "{"
 	a := [25, 50, 100, 250, 500]
@@ -266,4 +226,36 @@ getResultString(res) {
 	}
 	return SubStr(s, 1, -1) "}`n"
 }
+
+; runs every combination of sparse or dense, kruskal or prim `runCount` number of times, and writes results to a file.
+main(runCount){
+	loop runCount {
+		ToolTip(A_Index "/" runCount)
+		r := run()
+		FileAppend(r, "ahk_results.txt")
+	}
+}
+
+; returns combinations of sparse or dense, kruskal or prim, for all odd vert graphs from 25 - 99
+run(){
+	resKrusSparse := [], resPrimSparse := []
+	resKrusDense := [], resPrimDense := []
+	loop 100 - 25 {
+		if Mod(A_Index - 1 + 25, 2) = 0 {
+			n := A_Index + 23
+			resKrusSparse.Push(kruskal(adjMatFromFile("graph_verts" n "A.txt")))
+			resKrusDense.Push(kruskal(adjMatFromFile("graph_verts" n "B.txt")))
+			resPrimSparse.Push(prim(adjMatFromFile("graph_verts" n "A.txt")))
+			resPrimDense.Push(prim(adjMatFromFile("graph_verts" n "B.txt")))
+		}
+	}
+	
+	return getResultString(
+		Map(
+			"krus", Map("sparse", resKrusSparse, "dense", resKrusDense),
+			"prim", Map("sparse", resPrimSparse, "dense", resPrimDense)
+		)	
+	)
+}
+
 main(100)
